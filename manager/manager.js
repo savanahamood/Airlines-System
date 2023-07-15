@@ -1,39 +1,42 @@
+"use strict";
 
-'use strict';
 require('dotenv').config();
-const port = process.env.PORT || 3080;
+const port = process.env.PORT || 3030;
 const io = require('socket.io-client');
-let host = `http://localhost:${port}/`;
-const SystemConnection = io.connect(host);
+const host = `http://localhost:${port}/`;
+const systemConnection = io.connect(host);
+
+
 const { v4: uuidv4 } = require('uuid');
 const { faker } = require('@faker-js/faker');
 
-function scheduleNewFlight() {
+
+setInterval(() => {
   const flightId = uuidv4();
-  const pilotName = faker.person.firstName();
+  const pilotName = faker.person.fullName();
   const destination = faker.location.city();
 
   const flightDetails = {
-    event: 'new-flight',
-    time: new Date(),
+    event: "new-flight",
+    time: faker.date.future(),
     Details: {
-        airLine: 'Royal Jordanian Airlines',
-        flightID: flightId,
-        pilot: pilotName,
-        destination: destination,
-    },
-};
-  SystemConnection.emit('new-flight', flightDetails);
+      airLine: 'Royal Jordanian Airlines',
+      pilotName: pilotName,
+      flightID: flightId,
+      destination: destination,
+    } 
+  }
 
-}
+  console.log(`Manager: New Flight with ID: '${flightId}' have been scheduled`);
 
-function handleNewFlight(flightDetails) {
-  console.log(`Manager: new flight with ID '${flightDetails.Details.flightID}' has been scheduled`);
-  console.log(`Manager: we're greatly thankful for the amazing flight, ${flightDetails.Details.pilot}`);
-}
+  systemConnection.emit("new-flight", flightDetails);
 
+}, 10000);
 
+systemConnection.on('added-new-flight', (payload) => {
+  console.log(`Manager: The new flight is added ${payload.Details.flightID}`)
+})
 
-setInterval(scheduleNewFlight, 10000);
-SystemConnection.on('new-flight', handleNewFlight);
-
+systemConnection.on('thanku', (payload) => {
+  console.log(`Manager: we're greatly thankful for the amazing flight, ${payload.Details.pilotName}`)
+});
