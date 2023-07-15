@@ -21,13 +21,11 @@ systemConnection.on("new-flight-msg", (payload) => {
 
 function newFlight(payload) {
   setTimeout(() => {
-    // console.log(`flight with ID ‘${payload.Details.flightID}’ took-off`)
     payload.event = "took-off";
     airlineConnection.emit("took-off", payload);
   }, 4000);
 
   setTimeout(() => {
-    // console.log(`Pilot: flight with ID '${payload.Details.flightID}' has arrived`)
     payload.event = "Arrived";
     systemConnection.emit("Arrived", payload);
   }, 7000);
