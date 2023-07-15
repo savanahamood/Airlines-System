@@ -1,50 +1,66 @@
-'use strict';
-require('dotenv').config();
-const port = process.env.PORT || 3080;
-const socket = require('socket.io');
+"use strict";
+
+require("dotenv").config();
+const port = process.env.PORT || 3030;
+const socket = require("socket.io");
 const ioServer = socket(port);
-const AirLineConnection = ioServer.of('/airline');
-const { v4: uuidv4 } = require('uuid');
-const { faker } = require('@faker-js/faker');
+const uuid = require('uuid').v4;
+const queue = {
+  flights: {
+
+  }
+}
+
+ioServer.on("connection", (newSocket) => {
+  console.log(`connected ${newSocket.id}`);
+
+  newSocket.on("new-flight", (payload) => {
+    console.log("Flight ", payload);
+    ioServer.emit("flight-pilot-status",payload);
+
+    const id = uuid();
+    queue.flights[id] = payload;
+    newSocket.emit('added-new-flight', payload);
+    ioServer.emit('new-flight-msg', {
+      id: id,
+      Details: queue.flights[id]
+    })
+  });
+
+  newSocket.on("Arrived", (payload) => {
+    // console.log("Flight ", payload);
+    ioServer.emit('thanku',payload);
+  });
 
 
-ioServer.on('connection', (socket) => {
-    console.log('connected ', socket.id);
+  newSocket.on('get-all', () => {
+    Object.keys(queue.flights).forEach((id) => {
+      newSocket.emit('new-flight-msg', {
+        id: id,
+        Details: queue.flights[id]
+      })
+    })
+  })
 
-    const flightId = uuidv4();
-    const destination = faker.location.city();
-    const pilotName = faker.person.firstName();
 
-    const flightDetails = {
-        event: 'new-flight',
-        time: new Date(),
-        Details: {
-            airLine: 'Royal Jordanian Airlines',
-            flightID: flightId,
-            pilot: pilotName,
-            destination: destination,
-        },
-    };
-    socket.on('new-flight', (flightDetails) => {
+  newSocket.on('received', (payload) => {
+    console.log('msgQueue v1', payload.Details)
+    delete queue.flights[payload.id];
+    console.log('msgQueue v2', queue.flights)
+    console.log('---------------------------------------------');
+    console.log('---------------------------------------------');
 
-        console.log('Flight', flightDetails);
-        socket.emit('new-flight', flightDetails);
+  })
 
-        setTimeout(() => {
-            flightDetails.event='took-off'
-            AirLineConnection.emit('took-off', flightDetails);
-            console.log('Flight', flightDetails);
-            AirLineConnection.emit('took-off-log', flightDetails.Details.flightID);
-        }, 4000);
 
-        setTimeout(() => {
-            flightDetails.event='Arrived'
+});
 
-            socket.emit('Arrived', flightDetails);
-            console.log('Flight', flightDetails);
-            AirLineConnection.emit('arrived-log', flightDetails.Details.flightID);
-        }, 7000);
+const airline = ioServer.of('/airline');
 
+airline.on('connection', (newSocket) => {
+    console.log(`connected with airline ${newSocket.id}`);
+    newSocket.on("took-off", (payload) => {
+        // console.log("Flight ", payload);
     });
-
+    
 })
